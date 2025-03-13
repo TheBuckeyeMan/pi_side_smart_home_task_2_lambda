@@ -1,0 +1,8 @@
+spring:
+  test: "Prod-test"
+
+
+aws:
+  databases:
+    dynamodb:
+      serialnumbers: ${SERIAL_NUMBER_DYNAMO_DB}
