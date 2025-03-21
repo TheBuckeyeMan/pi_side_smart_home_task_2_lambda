@@ -84,7 +84,8 @@
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
-            <artifactId>spring-web</artifactId>
+            <artifactId>spring-web</artifactId> 
+            <version>6.2.5</version>       
         </dependency>
 
         <dependency>
@@ -104,8 +105,22 @@
             <artifactId>polly</artifactId>
             <version>2.20.10</version> <!-- Use the latest version -->
         </dependency>
-
-
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-dynamodb</artifactId>
+            <version>1.12.538</version> <!-- Use the latest version available -->
+        </dependency>
+        
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>dynamodb</artifactId>
+            <version>2.20.0</version> <!-- Use the latest version available -->
+        </dependency>
+        <dependency> <!--FOr API Gateway Integration-->
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-lambda-java-events</artifactId>
+            <version>3.11.0</version>
+        </dependency>
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
