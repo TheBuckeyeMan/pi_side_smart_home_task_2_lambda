@@ -13,9 +13,11 @@ import com.amazonaws.event.DeliveryMode.Check;
 public class ServiceTrigger {
     private static final Logger log = LoggerFactory.getLogger(ServiceTrigger.class);
     private final GetCertificates getCertificates;
+    private final CheckThingExists checkThingExists;
 
-    public ServiceTrigger(GetCertificates getCertificates){
+    public ServiceTrigger(GetCertificates getCertificates, CheckThingExists checkThingExists){
         this.getCertificates = getCertificates;
+        this.checkThingExists = checkThingExists;
     }
 
     @Value("${spring.profiles.active}")
@@ -32,8 +34,18 @@ public class ServiceTrigger {
         log.info("Begining to Collect Contents of Fun Fact form S3 Bucket");
         log.info("The DYnamo DB Instance name is: " + dynamoDBTable);
         try{
-            String certificate = getCertificates.getIoTCertificates(input, dynamoDBTable);
-            
+
+            //Logic to check if serial Number already exists in a thing, 
+
+            boolean doesThingExist = checkThingExists.isThingRegistered(input);
+            log.info("The value of the boolean in ServiceTrigger is" + doesThingExist);
+
+
+
+
+
+            // String certificate = getCertificates.getIoTCertificates(input, dynamoDBTable);
+
         
 
         //Some logic to talk to IoT Template to get the certificate if boolean is true - might need configuration

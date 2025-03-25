@@ -22,7 +22,7 @@ public class GetCertificates {
         //Vailidate that the inputs were passed correctly
         validateParams(input, dynamoDBTable);
 
-        // 
+        // some logic to get the cert - see code form chat below
 
 
         //Return the cert
@@ -46,3 +46,62 @@ public class GetCertificates {
         }
     }
 }
+
+
+// import software.amazon.awssdk.services.iot.IotClient;
+// import software.amazon.awssdk.services.iot.model.*;
+
+// public class IoTCertService {
+
+//     private final IotClient iotClient;
+
+//     public IoTCertService(IotClient iotClient) {
+//         this.iotClient = iotClient;
+//     }
+
+//     public CertificateData createCertificateAndAttach(String thingName, String policyName) {
+//         // Step 1: Generate a new certificate
+//         CreateKeysAndCertificateResponse certResponse = iotClient.createKeysAndCertificate(CreateKeysAndCertificateRequest.builder().setAsActive(true).build());
+
+//         String certificateArn = certResponse.certificateArn();
+//         String certificateId = certResponse.certificateId();
+
+//         // Step 2: Attach Certificate to Thing
+//         AttachThingPrincipalRequest attachThingRequest = AttachThingPrincipalRequest.builder()
+//                 .thingName(thingName)
+//                 .principal(certificateArn)
+//                 .build();
+//         iotClient.attachThingPrincipal(attachThingRequest);
+
+//         // Step 3: Attach IoT Policy
+//         AttachPolicyRequest attachPolicyRequest = AttachPolicyRequest.builder()
+//                 .policyName(policyName)
+//                 .target(certificateArn)
+//                 .build();
+//         iotClient.attachPolicy(attachPolicyRequest);
+
+//         // Step 4: Get IoT Core Endpoint for MQTT
+//         DescribeEndpointRequest endpointRequest = DescribeEndpointRequest.builder()
+//                 .endpointType("iot:Data-ATS")
+//                 .build();
+//         DescribeEndpointResponse endpointResponse = iotClient.describeEndpoint(endpointRequest);
+
+//         return new CertificateData(certResponse.certificatePem(), certResponse.keyPair().privateKey(), endpointResponse.endpointAddress());
+//     }
+
+//     public static class CertificateData {
+//         private final String certificatePem;
+//         private final String privateKey;
+//         private final String endpoint;
+
+//         public CertificateData(String certificatePem, String privateKey, String endpoint) {
+//             this.certificatePem = certificatePem;
+//             this.privateKey = privateKey;
+//             this.endpoint = endpoint;
+//         }
+
+//         public String getCertificatePem() { return certificatePem; }
+//         public String getPrivateKey() { return privateKey; }
+//         public String getEndpoint() { return endpoint; }
+//     }
+// }
