@@ -1,6 +1,7 @@
 package com.example.app.service;
 
 
+import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,15 +56,16 @@ public class GetCertificates {
             //Attach the Certificate to the THING
             attachCertToThing(THING, certificates);
 
-            //Return the Certificate
+            //Format the Response 
+            Map<String, Object> response = formatResponse(certificates, THING);
 
-
+            //Return the response
+            return response;
 
         } else {
             log.info("Device for serial number: " + serialNumber + " is already regsitered and as a result we will not register a new device");
+            return Map.of("message", "Device already registered");
         }
-        
-        return "";
 
        } catch (Exception e){
               log.error("Fatal error occured while attempting to set up the device", e.getMessage(), e);
@@ -104,13 +106,14 @@ public class GetCertificates {
         log.info("Attempting to attach the policy to the certificate...");
         try {
             iotClient.attachPolicy(AttachPolicyRequest.builder()
-                .policyName("pi_side_iot_cert_policy")
+                .policyName("pi_side_smart_home_thing_policy") //Pre-Provisioned Policy for new Things
                 .target(certificates.certificateArn())
                 .build());
             log.info("Successfully attached the policy to the certificate!");
 
         } catch (RuntimeException e){
             log.error("Error occured while attempting to attach the policy to the certificates", e.getMessage(), e);
+            throw new RuntimeException();
         }
     }
 
@@ -124,6 +127,44 @@ public class GetCertificates {
             log.info("Successfully attached the certificate to the THING!");
         } catch (RuntimeException e){
             log.error("Error occured while attempting to attach the certificate to the thing", e.getMessage(), e);
+            throw new RuntimeException();
         }
+    }
+
+    private Map<String, Object> formatResponse(CreateKeysAndCertificateResponse certificates, String THING){
+        log.info("Attempting to build the response containing the certificates for the device");
+        try{    
+            Map<String, Object> response = new HashMap<>();
+            response.put("certificatePem", certificates.certificatePem());
+            response.put("privateKey", certificates.keyPair().privateKey());
+            response.put("rootCa", getAmazonRootCA()); // hardcoded PEM as a string
+            response.put("iotEndpoint", iotClient.describeEndpoint().endpointAddress());
+            response.put("thingName", THING);
+            log.info("The Response was formatted correctly including the certs");
+            return response;
+
+        } catch (Exception e){
+            log.error("Error occured while attmepting to generate the Response including the certificates.", e.getMessage(), e);
+            throw new RuntimeException();
+        }
+    }
+
+    //OKAY AS THIS IS THE ROOT CA FOR ALL AWS IOT OVER MQTT OVER ALL ACCOUNTS OVER ALL REGIONS - NOT SENSITIVE
+    private String getAmazonRootCA(){
+        return """
+-----BEGIN CERTIFICATE-----
+MIIBtjCCAVugAwIBAgIQB7ZeqYDPDGxXNzUhv1fW8zAKBggqhkjOPQQDAjA5MQsw
+CQYDVQQGEwJVUzEWMBQGA1UEChMNRW1hem9uLmNvbSBJbmMxFzAVBgNVBAMTDkFt
+YXpvbiBSb290IENBIDEwHhcNMTcwMzA2MDAwMDAwWhcNMzIwMzA2MjM1OTU5WjA5
+MQswCQYDVQQGEwJVUzEWMBQGA1UEChMNRW1hem9uLmNvbSBJbmMxFzAVBgNVBAMT
+DkFtYXpvbiBSb290IENBIDEwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAT3YXg8
+XceJQohHTP3foG7Xk11sxKZNDpNniDc2EYwvjYO3TuH26zcuE+0g6cN+xr3aMcMB
+XNte1qZP9EPDgQ+3o2YwZDAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB
+/zAdBgNVHQ4EFgQUpzCVIBos3H8YxVeTqkRkzAjgA4gwHwYDVR0jBBgwFoAUpzCV
+IBos3H8YxVeTqkRkzAjgA4gwCgYIKoZIzj0EAwIDSAAwRQIhAP9U1FVLtZL1NVr7
+t9N6byjHgNsx3Rp3XIan+FJxuxMxAiBr1Vy5iADG7n2AFD+a83H8XTur2qxGn8pY
+bexiRRqtkg==
+-----END CERTIFICATE-----
+""";
     }
 }

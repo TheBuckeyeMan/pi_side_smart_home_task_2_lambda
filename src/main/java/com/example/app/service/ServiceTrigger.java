@@ -40,12 +40,9 @@ public class ServiceTrigger {
         //Initialization Logs
         log.info("Begining processing of the Lambda for Raspberri Pi Task 2...");
         log.info("The Active Environment is set to: " + environment);
-        log.info("Begining to Collect Contents of Fun Fact form S3 Bucket");
-        log.info("The DYnamo DB Instance name is: " + dynamoDBTable);
 
-        String certs = getCertificates.setUpDevice(input);
-
-
+        //Get the certificates, Set up the THING, Associate the policy with the cert, then the cert with the thing - DOES NOT USE PROVISIONING TEMPLATE
+        Map<String, Object> certs = getCertificates.setUpDevice(input);
         return certs;
 
     }
