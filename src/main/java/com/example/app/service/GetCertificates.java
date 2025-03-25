@@ -1,107 +1,129 @@
 package com.example.app.service;
 
-import java.util.Map;
 
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.crt.Log;
+import software.amazon.awssdk.services.iot.IotClient;
+import software.amazon.awssdk.services.iot.model.AttachPolicyRequest;
+import software.amazon.awssdk.services.iot.model.AttachThingPrincipalRequest;
+import software.amazon.awssdk.services.iot.model.CreateKeysAndCertificateRequest;
+import software.amazon.awssdk.services.iot.model.CreateKeysAndCertificateResponse;
+import software.amazon.awssdk.services.iot.model.CreateThingRequest;
+
 
 @Service
 public class GetCertificates {
     private static final Logger log = LoggerFactory.getLogger(GetCertificates.class);
-    private final CheckSerialNumber checkSerialNumber;
+    private final CheckThingExists checkThingExists;
+    private final GetSerialNumber getSerialNumber;
+    private final IotClient iotClient;
 
-    public GetCertificates(CheckSerialNumber checkSerialNumber){
-        this.checkSerialNumber = checkSerialNumber;
+
+
+    public GetCertificates(CheckThingExists checkThingExists, GetSerialNumber getSerialNumber, IotClient iotClient){
+        this.checkThingExists = checkThingExists;
+        this.getSerialNumber = getSerialNumber;
+        this.iotClient = iotClient;
+
     }
 
+    public Map<String, Object> setUpDevice(Map<String, Object> input){
+       log.info("Attempting to set up the devices THING, Certificates, and policies...");
+       try{
+        //Get the serial number from the request for the device
+        String serialNumber = getSerialNumber.getSerialNumber(input);
 
-    public String getIoTCertificates(Map<String, Object> input, String dynamoDBTable){
-        log.info("Attemptin to begin getting IoT Certificates for Raspberry Pi...");
+        //Check if the device is registered
+        boolean isDeviceRegistered = checkThingExists.isThingRegistered(input);
 
-        //Vailidate that the inputs were passed correctly
-        validateParams(input, dynamoDBTable);
+        //Register device, generate certs, Thing, Policy if not registered
+        if (isDeviceRegistered == false){
+            log.info("Device is not registered, attempting to register the device...");
 
-        // some logic to get the cert - see code form chat below
+            //Create the THING
+            String THING = createIotThing(serialNumber);
+
+            //Create the certificates
+            CreateKeysAndCertificateResponse certificates = createCertificates();
+
+            //Attach policy and certs to the thing - Uses pre-existing policy provisioned in IAC
+            attachPolicyToCert(certificates);
+
+            //Attach the Certificate to the THING
+            attachCertToThing(THING, certificates);
+
+            //Return the Certificate
 
 
-        //Return the cert
 
+        } else {
+            log.info("Device for serial number: " + serialNumber + " is already regsitered and as a result we will not register a new device");
+        }
+        
         return "";
+
+       } catch (Exception e){
+              log.error("Fatal error occured while attempting to set up the device", e.getMessage(), e);
+              throw new RuntimeException();
+       }
     }
 
-    private void validateParams(Map<String, Object> input, String dynamoDBTable){
-        log.info("Attempting to validate the input params for GetCertificates are valid...");
+    private String createIotThing(String serialNumber){
+        log.info("Attempting to create THING: " + serialNumber);
         try{
-            if (input == null || input.isEmpty()){
-                log.error("The Input parameters passed to the GetCertificate class is invalic - This may be a problem with the inital request to API Gateway");
-                throw new IllegalArgumentException();
-            }
-            if (dynamoDBTable == null || dynamoDBTable.isEmpty()){
-                log.error("The value passed as the dynamoDBTable is: " + dynamoDBTable + " This may have occured if you forgot to pass in as an environment variable");
-                throw new IllegalArgumentException();
-            }
-        } catch (Exception e){
-            log.error("Critical error occured while attempting to validate the parameters for GetCertificates class", e.getMessage(), e);
+            String thingName = iotClient.createThing(CreateThingRequest.builder()
+                .thingName(serialNumber)
+                .build()).thingName();
+            log.info("Successfully created THING!");
+            return thingName;
+
+        } catch (RuntimeException e){
+            log.error("Error occured while attempting to create thing in aws", e.getMessage(), e);
+            throw new RuntimeException();
+        }
+    }
+
+    private CreateKeysAndCertificateResponse createCertificates(){
+        log.info("Attempting to create certificates for the device...");
+        try{
+            CreateKeysAndCertificateResponse certResponse = iotClient.createKeysAndCertificate(CreateKeysAndCertificateRequest.builder()
+                .setAsActive(true)
+                .build());
+            log.info("Successfully generated certificates!");
+            return certResponse;
+        } catch (RuntimeException e){
+            log.error("Error occured while attempting to generate the certificates for the THING", e.getMessage(), e);
+            throw new RuntimeException();
+        }
+    }
+
+    private void attachPolicyToCert(CreateKeysAndCertificateResponse certificates){
+        log.info("Attempting to attach the policy to the certificate...");
+        try {
+            iotClient.attachPolicy(AttachPolicyRequest.builder()
+                .policyName("pi_side_iot_cert_policy")
+                .target(certificates.certificateArn())
+                .build());
+            log.info("Successfully attached the policy to the certificate!");
+
+        } catch (RuntimeException e){
+            log.error("Error occured while attempting to attach the policy to the certificates", e.getMessage(), e);
+        }
+    }
+
+    private void attachCertToThing(String thingName, CreateKeysAndCertificateResponse certificates){
+        log.info("Attempting to attach the certificate to the THING...");
+        try{
+            iotClient.attachThingPrincipal(AttachThingPrincipalRequest.builder()
+                .thingName(thingName)
+                .principal(certificates.certificateArn())
+                .build());
+            log.info("Successfully attached the certificate to the THING!");
+        } catch (RuntimeException e){
+            log.error("Error occured while attempting to attach the certificate to the thing", e.getMessage(), e);
         }
     }
 }
-
-
-// import software.amazon.awssdk.services.iot.IotClient;
-// import software.amazon.awssdk.services.iot.model.*;
-
-// public class IoTCertService {
-
-//     private final IotClient iotClient;
-
-//     public IoTCertService(IotClient iotClient) {
-//         this.iotClient = iotClient;
-//     }
-
-//     public CertificateData createCertificateAndAttach(String thingName, String policyName) {
-//         // Step 1: Generate a new certificate
-//         CreateKeysAndCertificateResponse certResponse = iotClient.createKeysAndCertificate(CreateKeysAndCertificateRequest.builder().setAsActive(true).build());
-
-//         String certificateArn = certResponse.certificateArn();
-//         String certificateId = certResponse.certificateId();
-
-//         // Step 2: Attach Certificate to Thing
-//         AttachThingPrincipalRequest attachThingRequest = AttachThingPrincipalRequest.builder()
-//                 .thingName(thingName)
-//                 .principal(certificateArn)
-//                 .build();
-//         iotClient.attachThingPrincipal(attachThingRequest);
-
-//         // Step 3: Attach IoT Policy
-//         AttachPolicyRequest attachPolicyRequest = AttachPolicyRequest.builder()
-//                 .policyName(policyName)
-//                 .target(certificateArn)
-//                 .build();
-//         iotClient.attachPolicy(attachPolicyRequest);
-
-//         // Step 4: Get IoT Core Endpoint for MQTT
-//         DescribeEndpointRequest endpointRequest = DescribeEndpointRequest.builder()
-//                 .endpointType("iot:Data-ATS")
-//                 .build();
-//         DescribeEndpointResponse endpointResponse = iotClient.describeEndpoint(endpointRequest);
-
-//         return new CertificateData(certResponse.certificatePem(), certResponse.keyPair().privateKey(), endpointResponse.endpointAddress());
-//     }
-
-//     public static class CertificateData {
-//         private final String certificatePem;
-//         private final String privateKey;
-//         private final String endpoint;
-
-//         public CertificateData(String certificatePem, String privateKey, String endpoint) {
-//             this.certificatePem = certificatePem;
-//             this.privateKey = privateKey;
-//             this.endpoint = endpoint;
-//         }
-
-//         public String getCertificatePem() { return certificatePem; }
-//         public String getPrivateKey() { return privateKey; }
-//         public String getEndpoint() { return endpoint; }
-//     }
-// }

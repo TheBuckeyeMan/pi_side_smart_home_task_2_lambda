@@ -6,4 +6,6 @@ aws:
   databases:
     dynamodb:
       serialnumbers: ${SERIAL_NUMBER_DYNAMO_DB}
-
+  iot:
+    template:
+      name: ${IOT_TEMPLATE_NAME}

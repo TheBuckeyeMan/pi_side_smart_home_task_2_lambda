@@ -15,6 +15,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.example.app.App;
 import com.example.app.service.ServiceTrigger;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 public class LambdaHandler implements RequestHandler<Map<String, Object>, Object> {
@@ -22,6 +24,7 @@ public class LambdaHandler implements RequestHandler<Map<String, Object>, Object
     private final ApplicationContext context;
     private final S3AsyncClient s3Client;
     private ServiceTrigger serviceTrigger;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public LambdaHandler() {
         this.context = new SpringApplicationBuilder(App.class)
@@ -37,8 +40,15 @@ public class LambdaHandler implements RequestHandler<Map<String, Object>, Object
         try{
             Object serviceResponse = serviceTrigger.TriggerService(input);
 
+            String responseBody = objectMapper.writeValueAsString(
+                Map.of(
+                    "message", "Success from Lambda!",
+                    "data", serviceResponse
+                )
+            );
+
             //Retrutrn response for API Gateway
-            return createResponse(200, "{\"message\": \"Success from Lambda!\", \"data\": \"" + serviceResponse + "\"}");
+            return createResponse(200, responseBody);
 
         } catch (Exception e){
             log.error("Lambda 2 is unable to process the request", e.getMessage(), e);
@@ -53,13 +63,13 @@ public class LambdaHandler implements RequestHandler<Map<String, Object>, Object
         try{
             
             Map<String, Object> response = new HashMap<>();
-            response.put("Status Code:", statusCode);
+            response.put("statusCode", statusCode);
 
             Map<String, String> headers = new HashMap<>();
-            response.put("Content-Type", "application/json");
-            response.put("Headers", headers);
+            headers.put("Content-Type", "application/json");
+            response.put("headers", headers);
 
-            response.put("Body", body);
+            response.put("body", body);
             return response;
 
         } catch (RuntimeException e){

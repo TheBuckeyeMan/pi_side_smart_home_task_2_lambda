@@ -2,7 +2,13 @@ spring:
   test: "dev"
 
 aws:
+  account:
+    id: "339712758982"
+    region: "us-east-2"
   databases:
     dynamodb:
       serialnumbers: ${SERIAL_NUMBER_DYNAMO_DB}
+  iot:
+    template:
+      name: ${IOT_TEMPLATE_NAME}
 

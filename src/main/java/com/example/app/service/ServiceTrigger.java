@@ -26,6 +26,15 @@ public class ServiceTrigger {
     @Value("${aws.databases.dynamodb.serialnumbers}")
     private String dynamoDBTable;
 
+    @Value("${aws.iot.template.name}")
+    private String templateName;
+
+    @Value("${aws.account.id}")
+    private String awsAccountId;
+
+    @Value("${aws.account.region}")
+    private String awsRegion;
+
 
     public Map<String, Object> TriggerService(Map<String, Object> input){
         //Initialization Logs
@@ -33,30 +42,11 @@ public class ServiceTrigger {
         log.info("The Active Environment is set to: " + environment);
         log.info("Begining to Collect Contents of Fun Fact form S3 Bucket");
         log.info("The DYnamo DB Instance name is: " + dynamoDBTable);
-        try{
 
-            //Logic to check if serial Number already exists in a thing, 
-
-            boolean doesThingExist = checkThingExists.isThingRegistered(input);
-            log.info("The value of the boolean in ServiceTrigger is" + doesThingExist);
+        String certs = getCertificates.setUpDevice(input);
 
 
-
-
-
-            // String certificate = getCertificates.getIoTCertificates(input, dynamoDBTable);
-
-        
-
-        //Some logic to talk to IoT Template to get the certificate if boolean is true - might need configuration
-        //return certificate
-
-
-        return input;
-        } catch (Exception e){
-            log.error("Unable to execute lambda funciton", e.getMessage(), e);
-            throw new RuntimeException();
-        }
+        return certs;
 
     }
 }
