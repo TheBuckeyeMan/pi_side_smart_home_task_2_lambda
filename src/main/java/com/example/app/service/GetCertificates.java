@@ -6,7 +6,6 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.crt.Log;
 import software.amazon.awssdk.services.iot.IotClient;
 import software.amazon.awssdk.services.iot.model.AttachPolicyRequest;
 import software.amazon.awssdk.services.iot.model.AttachThingPrincipalRequest;
@@ -30,7 +29,6 @@ public class GetCertificates {
         this.iotClient = iotClient;
 
     }
-    
 
     public Map<String, Object> setUpDevice(Map<String, Object> input){
        log.info("Attempting to set up the devices THING, Certificates, and policies...");
