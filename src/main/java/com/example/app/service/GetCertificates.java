@@ -30,6 +30,7 @@ public class GetCertificates {
         this.iotClient = iotClient;
 
     }
+    
 
     public Map<String, Object> setUpDevice(Map<String, Object> input){
        log.info("Attempting to set up the devices THING, Certificates, and policies...");
