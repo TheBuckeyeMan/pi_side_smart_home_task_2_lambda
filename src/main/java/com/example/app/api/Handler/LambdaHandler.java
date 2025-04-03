@@ -17,8 +17,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.example.app.App;
 import com.example.app.service.ServiceTrigger;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 public class LambdaHandler implements RequestHandler<Map<String, Object>, Object> {
@@ -37,28 +37,36 @@ public class LambdaHandler implements RequestHandler<Map<String, Object>, Object
     }
 
     @Override
-    public Object handleRequest(final Map<String, Object> input, final Context context) {
+    public Object handleRequest(final Map<String, Object> input, final Context context){
         log.info("Triggering Lambda...");
         try{
             //Run the code
             Map<String, Object> serviceResponse = (Map<String, Object>) serviceTrigger.TriggerService(input);
 
+            //Build Success Response
+            Map<String, Object> responseBody = Map.of(
+            "message", "Success from Lambda!",
+            "data", serviceResponse
+            );
+
             //Retrutrn response for API Gateway
-            return ResponseEntity.ok()
-                    .header("Content-Type", "application/json")
-                    .body(Map.of(
-                        "message", "Success from Lambda!",
-                        "data", serviceResponse
-                    ));
+            Map<String, Object> lambdaResponse = new HashMap<>();
+            lambdaResponse.put("statusCode", 200);
+            lambdaResponse.put("headers", Map.of("Content-Type", "application/json"));
+            lambdaResponse.put("body", objectMapper.writeValueAsString(responseBody));
+
+
+            return lambdaResponse;
 
         } catch (Exception e){
             log.error("Lambda 2 is unable to process the request", e.getMessage(), e);
-            return ResponseEntity.status(500)
-                    .header("Content-Type", "application/json")
-                    .body(Map.of(
-                        "message", "Error from Lambda!",
-                        "error", e.getMessage()
-                    ));
+
+            Map<String, Object> lambdaError = new HashMap<>();
+            lambdaError.put("statusCode", 500);
+            lambdaError.put("headers", Map.of("Content-Type", "application/json"));
+            lambdaError.put("body", "Critical Error occured while attempting to trigger lambda");
+
+            return lambdaError;
         }
     }
 
